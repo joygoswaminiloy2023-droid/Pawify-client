@@ -72,8 +72,6 @@ function PawStep({
   const rawScale = useTransform(scrollYProgress, [start, end], [0.6, 1]);
 
   return (
-    <>
-    <Navbar></Navbar>
     <motion.div
       style={{
         opacity: reduceMotion ? 1 : rawOpacity,
@@ -84,7 +82,6 @@ function PawStep({
     >
       <PawPrint className="h-5 w-5" fill="currentColor" strokeWidth={0} />
     </motion.div>
-    </>
   );
 }
 
