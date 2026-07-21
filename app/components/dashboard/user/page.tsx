@@ -25,6 +25,7 @@ export default function UserDashboard() {
   const [reviewModal, setReviewModal] = useState<{ orderId: string; productId: string; name: string } | null>(null);
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "" });
   const [reviewedItems, setReviewedItems] = useState<Set<string>>(new Set());
+  const [myReviews, setMyReviews] = useState<any[]>([]);
   const [submittingReview, setSubmittingReview] = useState(false);
   // Track which items are being reviewed locally
   const [locallyReviewed, setLocallyReviewed] = useState<Set<string>>(new Set());
@@ -45,6 +46,7 @@ export default function UserDashboard() {
       ]);
       
       console.log("Orders loaded:", ordersRes.data);
+      console.log("Reviews loaded:", reviewsRes.data);
       
       setOrders(ordersRes.data || []);
       setProfile(meRes.data);
@@ -55,13 +57,16 @@ export default function UserDashboard() {
         image: meRes.data?.image || "",
       });
 
-      // Track which items have been reviewed
+      // Track which items have been reviewed and store reviews
       const reviewed = new Set<string>();
-      (reviewsRes.data?.data || []).forEach((review: any) => {
+      const reviewsData = reviewsRes.data?.data || reviewsRes.data || [];
+      const reviewsArray = Array.isArray(reviewsData) ? reviewsData : [];
+      reviewsArray.forEach((review: any) => {
         const key = `${review.orderId}-${review.productId}`;
         reviewed.add(key);
       });
       setReviewedItems(reviewed);
+      setMyReviews(reviewsArray);
       
       // Clear local reviewed items on load
       setLocallyReviewed(new Set());
@@ -115,6 +120,19 @@ export default function UserDashboard() {
       setReviewedItems(prev => new Set(prev).add(key));
       setLocallyReviewed(prev => new Set(prev).add(key));
       
+      // Add to myReviews for immediate display
+      setMyReviews(prev => [...prev, {
+        _id: Date.now().toString(),
+        productId: reviewModal.productId,
+        productName: reviewModal.name,
+        orderId: reviewModal.orderId,
+        rating: reviewForm.rating,
+        comment: reviewForm.comment,
+        userName: profile?.name || 'User',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }]);
+      
       setReviewModal(null);
       setReviewForm({ rating: 5, comment: "" });
       
@@ -127,6 +145,29 @@ export default function UserDashboard() {
       toast.error(err.message || "Failed to submit review");
     } finally {
       setSubmittingReview(false);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!confirm("Are you sure you want to delete this review?")) return;
+    
+    try {
+      await api.delete(`/api/reviews/${reviewId}`);
+      toast.success("Review deleted successfully");
+      setMyReviews(prev => prev.filter(r => r._id !== reviewId));
+      // Also update reviewedItems
+      const deletedReview = myReviews.find(r => r._id === reviewId);
+      if (deletedReview) {
+        const key = `${deletedReview.orderId}-${deletedReview.productId}`;
+        setReviewedItems(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(key);
+          return newSet;
+        });
+      }
+    } catch (error: any) {
+      console.error("Failed to delete review:", error);
+      toast.error(error.message || "Failed to delete review");
     }
   };
 
@@ -188,28 +229,69 @@ export default function UserDashboard() {
                 />
               </div>
 
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-                <h3 className="font-semibold text-slate-800 mb-4">Recent Orders</h3>
-                {orders.length === 0 ? (
-                  <EmptyState title="No orders yet" subtitle="Go find something pawsome to buy!" />
-                ) : (
-                  <div className="space-y-3">
-                    {orders.slice(0, 5).map((o) => (
-                      <div key={o._id} className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0">
-                        <div>
-                          <p className="text-sm font-medium text-slate-800">
-                            {o.items?.[0]?.name} {o.items?.length > 1 && `+${o.items.length - 1} more`}
-                          </p>
-                          <p className="text-xs text-slate-400">{new Date(o.createdAt).toLocaleDateString()}</p>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                  <h3 className="font-semibold text-slate-800 mb-4">Recent Orders</h3>
+                  {orders.length === 0 ? (
+                    <EmptyState title="No orders yet" subtitle="Go find something pawsome to buy!" />
+                  ) : (
+                    <div className="space-y-3">
+                      {orders.slice(0, 5).map((o) => (
+                        <div key={o._id} className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0">
+                          <div>
+                            <p className="text-sm font-medium text-slate-800">
+                              {o.items?.[0]?.name} {o.items?.length > 1 && `+${o.items.length - 1} more`}
+                            </p>
+                            <p className="text-xs text-slate-400">{new Date(o.createdAt).toLocaleDateString()}</p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="font-semibold text-teal-700">৳{o.totalAmount}</span>
+                            <StatusBadge status={o.status} />
+                          </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className="font-semibold text-teal-700">৳{o.totalAmount}</span>
-                          <StatusBadge status={o.status} />
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-slate-800">My Reviews</h3>
+                    <Link
+                      href="/reviews"
+                      className="text-xs text-teal-600 hover:text-teal-700 font-medium transition"
+                    >
+                      View all
+                    </Link>
                   </div>
-                )}
+                  {myReviews.length === 0 ? (
+                    <EmptyState title="No reviews yet" subtitle="Review products you've purchased!" />
+                  ) : (
+                    <div className="space-y-3">
+                      {myReviews.slice(0, 5).map((review: any) => (
+                        <div key={review._id} className="flex items-center gap-3 py-3 border-b border-slate-50 last:border-0">
+                          <div className="flex items-center gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`w-3 h-3 ${
+                                  star <= review.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-800 truncate">{review.productName}</p>
+                            <p className="text-xs text-slate-400 truncate">{review.comment || 'No comment'}</p>
+                          </div>
+                          <span className="text-xs text-slate-400">
+                            {new Date(review.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </motion.div>
           )}
