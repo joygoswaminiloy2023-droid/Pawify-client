@@ -84,20 +84,7 @@ Charts     →  Recharts
 <div align="center">
 
 ### 🏠 Home
-<img src="ui/Home.png" width="800" />
-
-### 🔐 Sign In
-<img src="ui/login.png" width="800" />
-
-### 🛍️ Shop
-<img src="ui/Shop.png" width="800" />
-
-### 🐈 Vendor Dashboard
-<img src="ui/Vendor_dashboard.png" width="800" />
-
-### 🐾 Admin Dashboard
-<img src="ui/Admin.png" width="800" />
-
+<img src="ui/pawify-mockup.png" width="800" />
 </div>
 
 ---
