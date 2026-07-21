@@ -83,7 +83,7 @@ Charts     →  Recharts
 
 <div align="center">
 
-### 🏠 Home
+### 🏠 MockUp
 <img src="ui/pawify-mockup.png" width="800" />
 </div>
 
